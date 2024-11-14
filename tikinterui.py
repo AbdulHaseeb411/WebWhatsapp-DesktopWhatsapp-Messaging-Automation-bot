@@ -19,8 +19,8 @@ class WhatsAppAutomationApp:
         self.root.geometry("1000x700")
 
         # Load and set the background image
-        self.background_image = Image.open("4.jpg")  # Replace with your image file
-        self.background_image = self.background_image.resize((1200, 700), Image.LANCZOS)
+        self.background_image = Image.open("image.png")  # Replace with your image file
+        self.background_image = self.background_image.resize((800, 700), Image.LANCZOS)
         self.bg_image = ImageTk.PhotoImage(self.background_image)
 
         # Create a label to hold the background image and place it
@@ -29,44 +29,39 @@ class WhatsAppAutomationApp:
 
         # Title
         title_label = Label(root, text="WhatsApp Automation Tool", font=("Helvetica", 12, "bold"), fg="#333333", bg="#f4f4f9")
-        title_label.pack(anchor="w", padx=20, pady=10)  # Left alignment with padding
+        title_label.pack(pady=20)  # Center alignment with padding
 
-        # Dropdown for WhatsApp type with Label in one line
-        platform_frame = Frame(root, bg="#f4f4f9")
-        platform_frame.pack(anchor="w", padx=20, pady=5)
+        # Dropdown for WhatsApp type with Label in a vertical column
+        platform_label = Label(root, text="Select WhatsApp  Type:", font=("Helvetica", 10, "bold"), fg="#555555", bg="#f4f4f9")
+        platform_label.pack(anchor="w", padx=20)
 
-        self.platform_label = Label(platform_frame, text="Select WhatsApp Type:", font=("Helvetica", 12), fg="#555555", bg="#f4f4f9")
-        self.platform_label.pack(side="left", padx=(0, 10))
-        
         self.platform_var = StringVar()
-        self.platform_dropdown = ttk.Combobox(platform_frame, textvariable=self.platform_var, font=("Helvetica", 10), state="readonly", width=20)
+        self.platform_dropdown = ttk.Combobox(root, textvariable=self.platform_var, font=("Helvetica", 10, "bold"), state="readonly", width=20)
         self.platform_dropdown["values"] = ["WhatsApp Web", "WhatsApp Desktop"]
-        self.platform_dropdown.pack(side="left")
+        self.platform_dropdown.pack(anchor="w", padx=20, pady=5)
 
-        # File Input and Browse Button in one line
-        csv_frame = Frame(root, bg="#f4f4f9")
-        csv_frame.pack(anchor="w", padx=20, pady=5)
+        # File Input and Browse Button in a vertical column
+        csv_label = Label(root, text="CSV File Path:", font=("Helvetica", 12, "bold"), fg="#555555", bg="#f4f4f9")
+        csv_label.pack(anchor="w", padx=20, pady=(10, 0))
 
-        self.csv_input = Entry(csv_frame, font=("Helvetica", 10), width=30, fg="#333333", bg="#ffffff")
+        self.csv_input = Entry(root, font=("Helvetica", 10), width=30, fg="#333333", bg="#ffffff")
         self.csv_input.insert(0, "Enter or browse CSV file path")
-        self.csv_input.pack(side="left", padx=(0, 5))
-        
-        self.browse_button = Button(csv_frame, text="Browse", font=("Helvetica", 10, "bold"), fg="#ffffff", bg="#4CAF50", command=self.browse_file)
-        self.browse_button.pack(side="left")
+        self.csv_input.pack(anchor="w", padx=20, pady=(0, 5))
 
-        # Message Input with Label in one line
-        message_frame = Frame(root, bg="#f4f4f9")
-        message_frame.pack(anchor="w", padx=20, pady=(10, 5))
+        self.browse_button = Button(root, text="Browse", font=("Helvetica", 10, "bold"), fg="#ffffff", bg="#4CAF50", command=self.browse_file)
+        self.browse_button.pack(anchor="w", padx=20, pady=(0, 15))
 
-        self.message_input_label = Label(message_frame, text="Enter Message:", font=("Helvetica", 12), fg="#555555", bg="#f4f4f9")
-        self.message_input_label.pack(side="left", padx=(0, 10))
-        
-        self.message_input = Entry(message_frame, font=("Helvetica", 10), width=30, fg="#333333", bg="#ffffff")
-        self.message_input.pack(side="left")
+        # Message Input with Label in a vertical column
+        message_label = Label(root, text="Enter Message:", font=("Helvetica", 12), fg="#555555", bg="#f4f4f9")
+        message_label.pack(anchor="w", padx=20, pady=(10, 0))
+
+        self.message_input = Entry(root, font=("Helvetica", 10), width=30, fg="#333333", bg="#ffffff")
+        self.message_input.pack(anchor="w", padx=20, pady=(0, 15))
 
         # Send Button
         self.send_button = Button(root, text="Send Messages", font=("Helvetica", 10, "bold"), fg="#ffffff", bg="#3e8e41", command=self.send_messages)
         self.send_button.pack(anchor="w", padx=20, pady=20)
+
 
 
     def browse_file(self):
