@@ -1,5 +1,5 @@
 import tkinter as tk
-from tkinter import filedialog, messagebox, Tk, Frame, Label, Entry, Button, StringVar, ttk
+from tkinter import filedialog, messagebox, Tk, Frame, Label, Entry, Button, StringVar, ttk,Text
 import csv
 import time
 from pywinauto import Application, findwindows, keyboard
@@ -15,6 +15,8 @@ from PIL import Image, ImageTk
 import re
 import subprocess
 from pywinauto import Desktop
+from pywinauto.keyboard import send_keys
+import pandas as pd
 import xml.etree.ElementTree as ET
 class WhatsAppAutomationApp:
     def __init__(self, root):
@@ -56,32 +58,39 @@ class WhatsAppAutomationApp:
         self.browse_button.pack(anchor="w", padx=20, pady=(0, 15))
 
         # Message Input with Label in a vertical column
+       # Label for the message input
         message_label = Label(root, text="Enter Message:", font=("Helvetica", 12), fg="#555555", bg="#f4f4f9")
         message_label.pack(anchor="w", padx=20, pady=(10, 0))
 
-        self.message_input = Entry(root, font=("Helvetica", 10), width=30, fg="#333333", bg="#ffffff")
-        self.message_input.pack(anchor="w", padx=20, pady=(0, 15))
 
+        self.message_input = Text(root, font=("Helvetica", 10), height=5, width=30, fg="#333333", bg="#ffffff")
+        self.message_input.pack(anchor="w", padx=20, pady=(0, 15))
         # Send Button
         self.send_button = Button(root, text="Send Messages", font=("Helvetica", 10, "bold"), fg="#ffffff", bg="#3e8e41", command=self.send_messages)
         self.send_button.pack(anchor="w", padx=20, pady=20)
 
 
 
-
     def browse_file(self):
-        # Allow selection of both CSV and XML files
-        file_path = filedialog.askopenfilename(filetypes=[("CSV files", "*.csv"), ("XML files", "*.xml")])
-        
+        # Allow selection of CSV, XML, and Excel files
+        file_path = filedialog.askopenfilename(filetypes=[
+            # ("CSV files", "*.csv"),
+            # ("XML files", "*.xml"),
+            # ("Excel files", "*.xls;*.xlsx"),  # Combine both Excel file extensions
+            ("All Files", "*.*")  # Option to show all files
+        ])
+
         if file_path:
             # Clear the current input field and insert the selected file path
             self.csv_input.delete(0, tk.END)
             self.csv_input.insert(0, file_path)
 
 
+
+
     def send_messages(self):
         csv_filename = self.csv_input.get()
-        message = self.message_input.get()
+        message = self.message_input.get("1.0", "end-1c")  # Get the entire text including line breaks
         platform = self.platform_var.get()
 
         if not csv_filename or not message or not platform:
@@ -137,7 +146,7 @@ class WhatsAppAutomationApp:
 
         # Connect to WhatsApp Desktop
         app = Application(backend="uia").connect(handle=windows[0])
-        contacts = self.read_contacts_from_csv(csv_filename)
+        contacts = self.read_contacts_from_excel(csv_filename)
         
         for contact_name in contacts:
             self.send_desktop_message(app, contact_name, message)
@@ -146,49 +155,61 @@ class WhatsAppAutomationApp:
         contacts = []
 
         # Check file extension to determine the format (CSV or XML)
-        if filename.endswith(".csv"):
-            contacts = self.read_contacts_from_csv(filename)
-        elif filename.endswith(".xml"):
-            contacts = self.read_contacts_from_xml(filename)
-        else:
-            messagebox.showerror("Error", "Unsupported file format. Please use CSV or XML.")
+        # if filename.endswith(".csv"):
+        #     contacts = self.read_contacts_from_csv(filename)
+        # elif filename.endswith(".xml"):
+        contacts = self.read_contacts_from_xml(filename)
+        # else:
+        #     messagebox.showerror("Error", "Unsupported file format. Please use CSV or XML.")
 
         return contacts
 
-    def read_contacts_from_csv(self, filename):
+    # def read_contacts_from_csv(self, filename):
+    #     contacts = []
+    #     try:
+    #         with open(filename, newline="") as csvfile:
+    #             csv_reader = csv.reader(csvfile)
+    #             for row in csv_reader:
+    #                 contacts.append(row[0].strip())  # Assuming contacts are in the first column
+    #     except FileNotFoundError:
+    #         messagebox.showerror("Error", f"CSV file '{filename}' not found.")
+    #     except Exception as e:
+    #         messagebox.showerror("Error", f"An error occurred while reading the CSV file: {e}")
+
+        return contacts
+
+
+    def read_contacts_from_excel(self, filename):
         contacts = []
         try:
-            with open(filename, newline="") as csvfile:
-                csv_reader = csv.reader(csvfile)
-                for row in csv_reader:
-                    contacts.append(row[0].strip())  # Assuming contacts are in the first column
+            # Check the file extension to determine which reader to use
+            if filename.endswith('.xlsx'):
+                # For modern Excel files (xlsx)
+                df = pd.read_excel(filename, engine='openpyxl')
+            elif filename.endswith('.xls'):
+                # For older Excel files (xls)
+                df = pd.read_excel(filename, engine='xlrd')
+            else:
+                raise ValueError("Invalid Excel file format. Only .xls and .xlsx are supported.")
+
+            # Check if the 'contact' column exists in the Excel file
+            if 'contact' in df.columns:
+                contacts = df['contact'].dropna().tolist()  # Get non-empty values from the 'contact' column
+            else:
+                messagebox.showerror("Error", f"Column 'contact' not found in the Excel file '{filename}'.")
+
         except FileNotFoundError:
-            messagebox.showerror("Error", f"CSV file '{filename}' not found.")
+            messagebox.showerror("Error", f"Excel file '{filename}' not found.")
+        except ValueError as ve:
+            messagebox.showerror("Error", str(ve))
         except Exception as e:
-            messagebox.showerror("Error", f"An error occurred while reading the CSV file: {e}")
+            messagebox.showerror("Error", f"An error occurred while reading the Excel file: {e}")
 
         return contacts
 
-    def read_contacts_from_xml(self, filename):
-        contacts = []
-        try:
-            tree = ET.parse(filename)
-            root = tree.getroot()
 
-            # Assuming contacts are stored as 'contact' elements under the root
-            for contact in root.findall("contact"):
-                name = contact.text.strip()  # Get the contact name
-                contacts.append(name)
-        except FileNotFoundError:
-            messagebox.showerror("Error", f"XML file '{filename}' not found.")
-        except ET.ParseError:
-            messagebox.showerror("Error", f"Error parsing the XML file '{filename}'.")
-        except Exception as e:
-            messagebox.showerror("Error", f"An error occurred while reading the XML file: {e}")
 
-        return contacts
-
-    import re
+    
 
     def send_whatsapp_message(self, driver, contact_name, message):
         time.sleep(4)
@@ -256,43 +277,102 @@ class WhatsAppAutomationApp:
             if len(message_input_controls) > 1:
                 return message_input_controls[-1]  # Assuming the last one is the message input box
             return None
+    # def send_desktop_message(self, app, contact_name, message):
+    #     main_window = app.window(title="WhatsApp")
+    #     time.sleep(2)  # Allow time for WhatsApp to load
+
+    #     # Step 1: Find the search box
+    #     print(f"Locating the search box...")
+    #     search_box = self.find_search_box(app)
+    #     if search_box:
+    #         print("Search box found, proceeding with search.")
+    #         # Step 2: Search for the contact
+    #         print(f"Searching for contact '{contact_name}'...")
+    #         search_box.set_focus()
+    #         search_box.type_keys(contact_name, with_spaces=True)
+    #         time.sleep(5)  # Wait for search results to load
+
+    #         # Step 3: Find the matching chat item
+    #         matching_chat_item = self.find_matching_chat_item(app, contact_name)
+
+    #         if matching_chat_item:
+    #             print(f"Clicked on the chat item.")
+    #             time.sleep(2)  # Allow time for the chat to open
+
+    #             # Step 4: Locate the message input box and send the message
+    #             message_input_box = self.find_message_input_box(app)
+    #             if message_input_box and message_input_box.is_enabled() and message_input_box.is_visible():
+    #                 message_input_box.set_focus()
+    #                 message_input_box.type_keys(message, with_spaces=True)
+    #                 keyboard.send_keys("{ENTER}")
+    #                 print(f"Message sent.")
+    #                 keyboard.send_keys("{ESC}")
+                    
+    #             else:
+    #                 print("Message input box not found or not interactable.")
+    #         else:
+    #             print(f"No chat found for '{contact_name}'.")
+    #     else:
+    #         print("Search box not found.")
+
+
+
     def send_desktop_message(self, app, contact_name, message):
         main_window = app.window(title="WhatsApp")
         time.sleep(2)  # Allow time for WhatsApp to load
 
-        # Step 1: Find the search box
+        # Step 1: Send CTRL + N to open a new chat
+        print("Opening a new chat...")
+        keyboard.send_keys('^n')  # CTRL + N to open a new chat window
+        time.sleep(2)  # Give it a moment for the new chat window to open
+
+        # Step 2: Find the search box
         print(f"Locating the search box...")
         search_box = self.find_search_box(app)
         if search_box:
             print("Search box found, proceeding with search.")
-            # Step 2: Search for the contact
+            # Step 3: Search for the contact
             print(f"Searching for contact '{contact_name}'...")
             search_box.set_focus()
             search_box.type_keys(contact_name, with_spaces=True)
             time.sleep(5)  # Wait for search results to load
 
-            # Step 3: Find the matching chat item
+            # Step 4: Find the matching chat item
             matching_chat_item = self.find_matching_chat_item(app, contact_name)
 
             if matching_chat_item:
                 print(f"Clicked on the chat item.")
                 time.sleep(2)  # Allow time for the chat to open
 
-                # Step 4: Locate the message input box and send the message
+                # Step 5: Locate the message input box and send the message
                 message_input_box = self.find_message_input_box(app)
                 if message_input_box and message_input_box.is_enabled() and message_input_box.is_visible():
                     message_input_box.set_focus()
-                    message_input_box.type_keys(message, with_spaces=True)
-                    keyboard.send_keys("{ENTER}")
+
+                    # Split the message into lines first (to handle line breaks properly)
+                    lines = message.split('\n')  # Split message by new lines
+                    for line in lines:
+                        words = line.split(' ')  # Split each line into words
+                        for word in words:
+                            keyboard.send_keys(word)  # Send each word
+                            keyboard.send_keys("{SPACE}")  # Add a space after each word
+                            
+                        # After sending all words in a line, add Shift+Enter for a line break
+                       # Simulate Shift+Enter to add a line break
+                    message.replace('\n', '+{ENTER}')
+                    # After sending all lines, send Enter to submit the message
+                    keyboard.send_keys("{ENTER}")  # Press Enter to send the message
                     print(f"Message sent.")
-                    keyboard.send_keys("{ESC}")
-                    
+                    keyboard.send_keys("{ESC}")  # Close the chat window
+
                 else:
                     print("Message input box not found or not interactable.")
             else:
                 print(f"No chat found for '{contact_name}'.")
         else:
             print("Search box not found.")
+
+
 
     def find_search_box(self, app):
         """Try to locate the search box in WhatsApp."""
